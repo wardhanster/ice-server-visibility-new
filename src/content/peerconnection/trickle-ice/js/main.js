@@ -7,7 +7,7 @@
  */
 
 'use strict';
-
+const doneAlert = document.querySelector("div#doneAlert");
 const addButton = document.querySelector('button#add');
 const candidateTBody = document.querySelector('tbody#candidatesBody');
 const gatherButton = document.querySelector('button#gather');
@@ -40,11 +40,47 @@ let candidates;
 
 const allServersKey = 'servers';
 
+fetchICEservers().then((d) => {
+  console.log(d);
+  const { username, password, ice_servers } = d;
+  ice_servers.forEach((item) => {
+    urlInput.value = item.url;
+    if (item.urls.indexOf("turn:") > -1) {
+      usernameInput.value = item.username;
+      passwordInput.value = item.credential;
+    }
+    addServer();
+    usernameInput.value = passwordInput.value = urlInput.value = "";
+  });
+});
+
+async function fetchICEservers() {
+  var myHeaders = new Headers();
+  myHeaders.append(
+    "Authorization",
+    "Basic U0tjYzMxZDM0N2YxOGVlYmM3MjNiMDgzNTc0ZTE2MWJjMDp6bFM1TjNmbGhWMEdOc0ZLcG1vbFBucW1TcWdMbEliNQ=="
+  );
+
+  var requestOptions = {
+    method: "POST",
+    headers: myHeaders,
+    redirect: "follow",
+  };
+  const twilioApi =
+    "https://api.twilio.com/2010-04-01/Accounts/AC2b4884e41acc8b8ed9f7ee795969d76b/Tokens.json";
+  const resp = await fetch(twilioApi, requestOptions);
+  const servers = await resp.json();
+  return servers;
+}
+
+
 function setDefaultServer(serversSelect) {
+  /**
   const o = document.createElement('option');
   o.value = '{"urls":["stun:stun.l.google.com:19302"]}';
   o.text = 'stun:stun.l.google.com:19302';
   serversSelect.add(o);
+  */
 }
 
 function writeServersToLocalStorage() {
@@ -54,15 +90,17 @@ function writeServersToLocalStorage() {
 }
 
 function readServersFromLocalStorage() {
-  document.querySelectorAll('select#servers option').forEach(option => option.remove());
-  const serversSelect = document.querySelector('select#servers');
-  const storedServers = window.localStorage.getItem(allServersKey);
+  document
+    .querySelectorAll("select#servers option")
+    .forEach((option) => option.remove());
+  const serversSelect = document.querySelector("select#servers");
+  const storedServers = null; //window.localStorage.getItem(allServersKey);
 
-  if (storedServers === null || storedServers === '') {
+  if (storedServers === null || storedServers === "") {
     setDefaultServer(serversSelect);
   } else {
     JSON.parse(storedServers).forEach((server, key) => {
-      const o = document.createElement('option');
+      const o = document.createElement("option");
       o.value = JSON.stringify(server);
       o.text = server.urls[0];
       o.ondblclick = selectServer;
@@ -80,29 +118,29 @@ function selectServer(event) {
 }
 
 function addServer() {
-  const scheme = urlInput.value.split(':')[0];
-  if (scheme !== 'stun' && scheme !== 'turn' && scheme !== 'turns') {
+  const scheme = urlInput.value.split(":")[0];
+  if (scheme !== "stun" && scheme !== "turn" && scheme !== "turns") {
     alert(`URI scheme ${scheme} is not valid`);
     return;
   }
 
   // Store the ICE server as a stringified JSON object in option.value.
-  const option = document.createElement('option');
+  const option = document.createElement("option");
   const iceServer = {
     urls: [urlInput.value],
     username: usernameInput.value,
-    credential: passwordInput.value
+    credential: passwordInput.value,
   };
   option.value = JSON.stringify(iceServer);
   option.text = `${urlInput.value} `;
   const username = usernameInput.value;
   const password = passwordInput.value;
   if (username || password) {
-    option.text += (` [${username}:${password}]`);
+    option.text += ` [${username}:${password}]`;
   }
   option.ondblclick = selectServer;
   servers.add(option);
-  urlInput.value = usernameInput.value = passwordInput.value = '';
+  urlInput.value = usernameInput.value = passwordInput.value = "";
   writeServersToLocalStorage();
 }
 
@@ -116,6 +154,7 @@ function removeServer() {
 }
 
 function start() {
+  doneAlert.style.display = "none";
   // Clean out the table.
   while (candidateTBody.firstChild) {
     candidateTBody.removeChild(candidateTBody.firstChild);
@@ -128,7 +167,7 @@ function start() {
   for (let i = 0; i < servers.length; ++i) {
     iceServers.push(JSON.parse(servers[i].value));
   }
-  const transports = document.getElementsByName('transports');
+  const transports = document.getElementsByName("transports");
   let iceTransports;
   for (let i = 0; i < transports.length; ++i) {
     if (transports[i].checked) {
@@ -141,25 +180,19 @@ function start() {
   const config = {
     iceServers: iceServers,
     iceTransportPolicy: iceTransports,
-    iceCandidatePoolSize: iceCandidatePoolInput.value
+    iceCandidatePoolSize: iceCandidatePoolInput.value,
   };
 
-  const offerOptions = {offerToReceiveAudio: 1};
+  const offerOptions = { offerToReceiveAudio: 1 };
   // Whether we gather IPv6 candidates.
   // Whether we only gather a single set of candidates for RTP and RTCP.
-
-  console.log(`Creating new PeerConnection with config=${JSON.stringify(config)}`);
-  document.getElementById('error').innerText = '';
+  console.log("Creating new PeerConnection with config: ", config);
+  document.getElementById("error").innerText = "";
   pc = new RTCPeerConnection(config);
   pc.onicecandidate = iceCallback;
   pc.onicegatheringstatechange = gatheringStateChange;
   pc.onicecandidateerror = iceCandidateError;
-  pc.createOffer(
-      offerOptions
-  ).then(
-      gotDescription,
-      noDescription
-  );
+  pc.createOffer(offerOptions).then(gotDescription, noDescription);
 }
 
 function gotDescription(desc) {
@@ -229,6 +262,7 @@ function getFinalResult() {
       }
     }
   }
+  if (result === "Done") doneAlert.style.display = "block";
   return result;
 }
 
@@ -277,6 +311,7 @@ function iceCandidateError(e) {
   // The interesting attributes of the error are
   // * the url (which allows looking up the server)
   // * the errorCode and errorText
+  console.log("iceCandidateError", e);
   document.getElementById('error-note').style.display = 'block';
   document.getElementById('error').innerText += 'The server ' + e.url +
     ' returned an error with code=' + e.errorCode + ':\n' +
@@ -290,8 +325,9 @@ navigator.mediaDevices
     .enumerateDevices()
     .then(function(devices) {
       devices.forEach(function(device) {
-        if (device.label !== '') {
-          document.getElementById('getUserMediaPermissions').style.display = 'block';
+        if (device.label !== "") {
+          console.log(device);
+          // document.getElementById('getUserMediaPermissions').style.display = 'block';
         }
       });
     });

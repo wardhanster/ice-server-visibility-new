@@ -1,19 +1,9 @@
 {
-  "name": "webrtc-samples",
+  "name": "server-visibility-test",
   "version": "1.0.0",
-  "description": "Project checking for WebRTC GitHub samples repo",
-  "keywords": [
-    "webrtc",
-    "demos",
-    "samples",
-    "javascript"
-  ],
-  "homepage": "https://github.com/webrtc/samples",
-  "bugs": {
-    "url": "https://github.com/webrtc/samples/issues"
-  },
+  "description": "",
+  "keywords": [],
   "license": "BSD-3-Clause",
-  "author": "The WebRTC project authors",
   "repository": {
     "type": "git",
     "url": "https://github.com/webrtc/samples.git"
